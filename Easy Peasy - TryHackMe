@@ -1,4 +1,3 @@
-````markdown
 # Easy Peasy - TryHackMe
 
 ## Overview
@@ -13,7 +12,7 @@ Easy Peasy is a beginner-friendly Linux machine that covers multiple penetration
 
 ```bash
 nmap -p- <TARGET_IP>
-````
+```
 
 ### Result
 
@@ -33,9 +32,9 @@ nmap -sC -sV -p 80,6498,65524 <TARGET_IP>
 
 This confirmed:
 
-* Nginx web server on port 80
-* OpenSSH on port 6498
-* Apache web server on port 65524
+- Nginx web server on port 80
+- OpenSSH on port 6498
+- Apache web server on port 65524
 
 ---
 
@@ -93,8 +92,8 @@ The value was decoded using **CyberChef with Base62 decoding**, which revealed a
 
 The discovered directory contained:
 
-* An image
-* A GOST hash
+- An image
+- A GOST hash
 
 The image was downloaded using:
 
@@ -239,33 +238,33 @@ The root directory was then accessed and the root flag was recovered.
 
 # Skills Practiced
 
-* Nmap Enumeration
-* Service Detection
-* Gobuster Directory Enumeration
-* HTML Source Code Analysis
-* Base64 Decoding
-* Base62 Decoding
-* GOST Hash Cracking
-* John the Ripper
-* Steganography
-* Binary Decoding
-* SSH Authentication
-* ROT13 Decoding
-* Linux Enumeration
-* Cron Job Privilege Escalation
+- Nmap Enumeration
+- Service Detection
+- Gobuster Directory Enumeration
+- HTML Source Code Analysis
+- Base64 Decoding
+- Base62 Decoding
+- GOST Hash Cracking
+- John the Ripper
+- Steganography
+- Binary Decoding
+- SSH Authentication
+- ROT13 Decoding
+- Linux Enumeration
+- Cron Job Privilege Escalation
 
 ---
 
 # Key Takeaways
 
-* Always perform a full TCP port scan.
-* Enumerate every exposed web service independently.
-* Review page source when investigating web applications.
-* Identify the encoding or data format before attempting to decode it.
-* Identify the hash type before attempting to crack it.
-* Images may contain hidden information.
-* Enumerate scheduled tasks after obtaining shell access.
-* Writable scripts executed with elevated privileges can lead to full system compromise.
+- Always perform a full TCP port scan.
+- Enumerate every exposed web service independently.
+- Review page source when investigating web applications.
+- Identify the encoding or data format before attempting to decode it.
+- Identify the hash type before attempting to crack it.
+- Images may contain hidden information.
+- Enumerate scheduled tasks after obtaining shell access.
+- Writable scripts executed with elevated privileges can lead to full system compromise.
 
 ---
 
@@ -276,6 +275,3 @@ The root directory was then accessed and the root flag was recovered.
 **Difficulty:** Easy
 
 **Techniques:** Enumeration, Web Exploitation, Hash Cracking, Steganography, SSH, Linux Privilege Escalation
-
-```
-```
